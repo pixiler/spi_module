@@ -1,0 +1,9 @@
+# Vivado proje/derleme ciktilari
+/spi_module/
+*.jou
+*.log
+*.str
+.Xil/
+xsim.dir/
+*.wdb
+*.pb
