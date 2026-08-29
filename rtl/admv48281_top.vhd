@@ -62,7 +62,8 @@ entity admv48281_top is
     G_TRX_DELAY_CYCLES : natural := 100;    -- 100 MHz'de 1 us
     G_RESET_WAIT       : natural := 1000;
     G_POLL_LIMIT       : natural := 2000;
-    G_RX_SETTLE_CYCLES : natural := 32
+    G_RX_SETTLE_CYCLES : natural := 64;
+    G_RX_FILTER_LEN    : natural := 3       -- donen CLK_OUT/SDO giris filtresi
   );
   port (
     clk   : in std_logic;
@@ -96,6 +97,9 @@ entity admv48281_top is
     rd_addr  : in  std_logic_vector(13 downto 0);
     rd_data  : out std_logic_vector(7 downto 0);
     rd_valid : out std_logic;                      -- 1 clock darbe
+    -- kalici teshis: bir okumada beklenen bit sayisi yakalanamadi
+    -- (ring gecikmesi / G_RX_SETTLE_CYCLES yetersiz ya da hatta glitch)
+    rd_short_err : out std_logic_vector(C_NUM_BUS-1 downto 0);
 
     -- durum
     init_done    : out std_logic;
@@ -229,7 +233,8 @@ begin
         G_LOAD_CYCLES      => C_LOAD_HALF,
         G_RESET_WAIT       => G_RESET_WAIT,
         G_POLL_LIMIT       => G_POLL_LIMIT,
-        G_RX_SETTLE_CYCLES => G_RX_SETTLE_CYCLES
+        G_RX_SETTLE_CYCLES => G_RX_SETTLE_CYCLES,
+        G_RX_FILTER_LEN    => G_RX_FILTER_LEN
       )
       port map (
         clk          => clk,
@@ -252,6 +257,8 @@ begin
         init_err     => bus_init_err(i),
         busy         => bus_busy(i),
         dbg_rd_data  => open,
+        dbg_rd_bits  => open,
+        rd_short_err => rd_short_err(i),
         spi_sclk_out => spi_sclk_out(i),
         spi_mosi     => spi_mosi(i),
         spi_cs_n     => spi_cs_n(i),

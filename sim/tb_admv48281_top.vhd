@@ -53,6 +53,7 @@ architecture sim of tb_admv48281_top is
   signal rd_addr  : std_logic_vector(13 downto 0) := (others => '0');
   signal rd_data  : std_logic_vector(7 downto 0);
   signal rd_valid : std_logic;
+  signal rd_short_err : std_logic_vector(C_NUM_BUS-1 downto 0);
 
   signal init_done    : std_logic;
   signal init_err     : std_logic;
@@ -99,7 +100,7 @@ begin
       G_TRX_DELAY_CYCLES => 100,   -- 100 MHz'de 1 us
       G_RESET_WAIT       => 20,
       G_POLL_LIMIT       => 2000,
-      G_RX_SETTLE_CYCLES => 32
+      G_RX_SETTLE_CYCLES => 64
     )
     port map (
       clk           => clk,
@@ -119,6 +120,7 @@ begin
       rd_addr       => rd_addr,
       rd_data       => rd_data,
       rd_valid      => rd_valid,
+      rd_short_err  => rd_short_err,
       init_done     => init_done,
       init_err      => init_err,
       busy          => busy,

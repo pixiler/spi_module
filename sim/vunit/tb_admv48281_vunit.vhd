@@ -17,6 +17,8 @@
 --   test_trx_sequence       TRX pini LOAD'dan sonra ve gecikmeyle degisir
 --   test_static_bus         statik bus (bus 6): acilis beam'i yuklenir,
 --                           trig'lerde yazilmaz, LOAD/TRX yine takip eder
+--   test_rx_window_too_short okuma penceresi yetersizken veri sessizce kaymaz,
+--                           short_err isaretlenir
 --   test_nvm_timeout        NVM bit6 hic gelmezse init_err
 --
 -- Kosturma:  cd sim/vunit && python run.py
@@ -49,6 +51,9 @@ entity tb_admv48281_vunit is
     -- verilir; boylece LOAD darbe genisligi turetmesi ucdan uca sinanir.
     G_CLK_FREQ_HZ : natural := 100000000;
 
+    G_RX_SETTLE_CYCLES : natural := 64;
+    G_RX_FILTER_LEN    : natural := 3;
+
     -- LOAD darbe genisligi: 0 = UG-2293 Table 2'den turet
     G_LOAD_CYCLES      : natural := 0;
     -- LOAD -> TRX gecikmesi (100 MHz'de 100 clock = 1 us)
@@ -80,6 +85,7 @@ architecture tb of tb_admv48281_vunit is
   signal rd_addr  : std_logic_vector(13 downto 0) := (others => '0');
   signal rd_data  : std_logic_vector(7 downto 0);
   signal rd_valid : std_logic;
+  signal rd_short_err : std_logic_vector(C_NUM_BUS-1 downto 0);
 
   signal init_done    : std_logic;
   signal init_err     : std_logic;
@@ -132,7 +138,8 @@ begin
       G_TRX_DELAY_CYCLES => G_TRX_DELAY_CYCLES,
       G_RESET_WAIT       => 20,
       G_POLL_LIMIT       => G_POLL_LIMIT,
-      G_RX_SETTLE_CYCLES => 32
+      G_RX_SETTLE_CYCLES => G_RX_SETTLE_CYCLES,
+      G_RX_FILTER_LEN    => G_RX_FILTER_LEN
     )
     port map (
       clk           => clk,
@@ -152,6 +159,7 @@ begin
       rd_addr       => rd_addr,
       rd_data       => rd_data,
       rd_valid      => rd_valid,
+      rd_short_err  => rd_short_err,
       init_done     => init_done,
       init_err      => init_err,
       busy          => busy,
@@ -715,6 +723,29 @@ begin
         do_beam('0', 2);
         check_equal(trx_out, C_ALL_ZERO_TB,
                     "RX turu sonrasi TRX tum buslarda (statik dahil) = 0");
+
+      --------------------------------------------------------------------------
+      -- Donen CLK_OUT'un son kenari okuma penceresinden sonra gelirse, veri
+      -- SESSIZCE KAYMAMALI; short_err ile isaretlenmeli. Donanimda gorulen
+      -- "okumada bit kaymasi" belirtisinin teshis yoludur.
+      elsif run("test_rx_window_too_short") then
+        reset_dut;
+        wait until rising_edge(clk);
+        enable <= '1';
+
+        -- init NVM polling'i okuma yapar; pencere yetersizse tamamlanamaz
+        for i in 0 to 400000 loop
+          wait until rising_edge(clk);
+          exit when init_done = '1' or init_err = '1'
+                 or rd_short_err /= C_ALL_ZERO_TB;
+        end loop;
+
+        check(rd_short_err /= C_ALL_ZERO_TB,
+              "yetersiz okuma penceresinde short_err bekleniyor "
+              & "(sessiz bit kaymasi yerine)");
+        check_equal(init_done, '0',
+                    "eksik bit yakalanmisken init tamamlanmis gorunmemeli");
+        info("short_err dogru sekilde isaretlendi, t = " & time'image(now));
 
       --------------------------------------------------------------------------
       elsif run("test_nvm_timeout") then

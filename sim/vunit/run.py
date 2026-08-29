@@ -75,6 +75,15 @@ for f_mhz in (100, 500):
     )
 
 # --------------------------------------------------------------------------
+# test_rx_window_too_short: ring gecikmesi okuma penceresinden buyuk. Beklenen
+# davranis, sessiz bit kaymasi degil short_err.
+# --------------------------------------------------------------------------
+tb.test("test_rx_window_too_short").add_config(
+    name="settle_too_small",
+    generics=dict(G_RING_DLY_NS=900, G_RX_SETTLE_CYCLES=16, G_POLL_LIMIT=20),
+)
+
+# --------------------------------------------------------------------------
 # test_nvm_timeout: model NVM bit6'yi hicbir zaman set etmez, polling siniri
 # kucuk tutulur; init_err beklenir.
 # --------------------------------------------------------------------------

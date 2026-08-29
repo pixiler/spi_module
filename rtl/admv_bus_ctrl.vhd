@@ -43,7 +43,8 @@ entity admv_bus_ctrl is
     G_LOAD_CYCLES      : natural := 4;
     G_RESET_WAIT       : natural := 1000;   -- soft reset sonrasi bekleme (clk)
     G_POLL_LIMIT       : natural := 2000;   -- NVM poll deneme siniri
-    G_RX_SETTLE_CYCLES : natural := 32
+    G_RX_SETTLE_CYCLES : natural := 64;
+    G_RX_FILTER_LEN    : natural := 3       -- donen CLK_OUT/SDO giris filtresi
   );
   port (
     clk   : in std_logic;
@@ -75,6 +76,8 @@ entity admv_bus_ctrl is
 
     -- teshis
     dbg_rd_data : out std_logic_vector(7 downto 0);
+    dbg_rd_bits : out std_logic_vector(7 downto 0);  -- son okumada yakalanan kenar
+    rd_short_err : out std_logic;                    -- kalici: eksik bit yakalandi
 
     -- SPI pinleri
     spi_sclk_out : out std_logic;
@@ -105,8 +108,13 @@ architecture rtl of admv_bus_ctrl is
   signal rd_arm    : std_logic;
 
   -- spi_slave arayuzu
-  signal rd_data  : std_logic_vector(7 downto 0);
-  signal rd_valid : std_logic;
+  signal rd_data   : std_logic_vector(7 downto 0);
+  signal rd_valid  : std_logic;
+  signal rd_bits   : std_logic_vector(7 downto 0);
+  signal rd_serr   : std_logic;
+  signal rd_nbits  : std_logic_vector(7 downto 0);
+  signal serr_lat  : std_logic := '0';
+  signal rd_bits_r : std_logic_vector(7 downto 0) := (others => '0');
 
   -- beam RAM (basit iki portlu)
   type t_ram is array (0 to C_RAM_SIZE-1) of std_logic_vector(31 downto 0);
@@ -180,20 +188,27 @@ begin
       spi_mosi  => spi_mosi,
       spi_cs_n  => spi_cs_n,
       rd_arm    => rd_arm,
+      rd_nbits  => rd_nbits,
       busy      => m_busy,
       done      => m_done
     );
 
   u_slave : entity work.spi_slave
+    generic map (
+      G_FILTER_LEN  => G_RX_FILTER_LEN,
+      G_SAMPLE_RISE => true
+    )
     port map (
-      clk     => clk,
-      rst_n   => rst_n,
-      arm     => rd_arm,
-      sclk_in => spi_sclk_in,
-      sdi_in  => spi_miso,
-      data    => rd_data,
-      bit_cnt => open,
-      valid   => rd_valid
+      clk       => clk,
+      rst_n     => rst_n,
+      arm       => rd_arm,
+      n_bits    => rd_nbits,
+      sclk_in   => spi_sclk_in,
+      sdi_in    => spi_miso,
+      data      => rd_data,
+      bit_cnt   => rd_bits,
+      valid     => rd_valid,
+      short_err => rd_serr
     );
 
   ------------------------------------------------------------------------------
@@ -241,7 +256,9 @@ begin
   init_err    <= init_err_r;
   beam_ready  <= beam_rdy_r;
   busy        <= '0' when (state = S_IDLE or state = S_READY) else '1';
-  dbg_rd_data <= rd_data_r;
+  dbg_rd_data  <= rd_data_r;
+  dbg_rd_bits  <= rd_bits_r;
+  rd_short_err <= serr_lat;
 
   user_rd_data  <= rd_data_r;
   user_rd_valid <= urd_vld_r;
@@ -272,10 +289,16 @@ begin
         beam_rdy_r  <= '0';
         str_sel     <= "00";
         rd_data_r   <= (others => '0');
+        rd_bits_r   <= (others => '0');
+        serr_lat    <= '0';
 
       else
         if rd_valid = '1' then
           rd_data_r <= rd_data;
+          rd_bits_r <= rd_bits;
+          if rd_serr = '1' then
+            serr_lat <= '1';   -- kalici: donanimda teshis icin
+          end if;
         end if;
 
         case state is

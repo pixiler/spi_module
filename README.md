@@ -23,7 +23,7 @@ Referans: *ADMV48281 Programming Reference Manual, UG-2293 Rev. Sp0*.
 | `sim/admv48281_ring_model.vhd` | ADMV48281 ring zinciri davranış modeli (sadece simülasyon) |
 | `sim/admv48281_tb_pkg.vhd` | İki testbench'in paylaştığı yardımcılar (beklenen beam byte'ı, hex, AXIS paket gönderme) |
 | `sim/tb_admv48281_top.vhd` | Klasik self-checking testbench (VUnit gerektirmez) |
-| `sim/vunit/tb_admv48281_vunit.vhd` + `run.py` | VUnit test paketi (17 test) |
+| `sim/vunit/tb_admv48281_vunit.vhd` + `run.py` | VUnit test paketi (18 test) |
 | `docs/admv48281_referans.html` | Görsel referans: akış + timing diyagramları, sinyal ve veri formatı tabloları (tarayıcıda açın) |
 | `legacy/` | Önceki DDR tabanlı implementasyon — derleme yoluna eklemeyin (bkz. `legacy/README.md`) |
 
@@ -229,10 +229,40 @@ izin veriyor). Ayrı V/H yönü gerekiyorsa `rx_tx_sel`'in de iki bite çıkmas�
 - Yazma: MOSI, üretilen `spi_sclk_out`'un düşen kenarında sürülür; çip yükselen
   kenarda örnekler.
 - Okuma: MISO, **dönen** `spi_sclk_in`'in (zincirin son çipinin CLK_OUT'u) yükselen
-  kenarında örneklenir. `spi_sclk_in` clock olarak kullanılmaz — sistem saatinde
-  aşırı örneklenip kenar tespiti yapılır, dolayısıyla clock-capable pin / BUFG
-  gerekmez. `f_clk / f_sclk ≥ 4` olmalı; bu yüzden okuma için `G_CLK_DIV_RD ≥ 4`.
-- 8 çiplik zincirin dönüş gecikmesi uzunsa `G_RX_SETTLE_CYCLES` büyütülmelidir.
+  kenarında örneklenir — kontrolcünün kendi SCLK'i ile **değil**. Dönen clock ile
+  SDO eş zamanlı geldiği için doğru referans odur.
+- `spi_sclk_in` **clock olarak kullanılmaz**: kodda hiçbir yerde
+  `rising_edge(spi_sclk_in)` yoktur. Sinyal sistem saatinde aşırı örneklenip kenarı
+  tespit edilir, dolayısıyla clock-capable pin, BUFG veya clock kaynağı gerekmez.
+  Gereken tek şey yeterli aşırı örnekleme oranıdır: `2 × G_CLK_DIV_RD ≥ 8`
+  (elaborasyonda `assert` ile kontrol edilir).
+
+### Okumada bit kayması — üç önlem
+
+Clock-capable olmayan bir pinde, seviye dönüştürücülü ve uzun ring izli bir hatta
+okunan baytın kayması tipik bir arızadır. Modül buna karşı:
+
+1. **Giriş filtresi** (`G_RX_FILTER_LEN`, varsayılan 3) — `spi_sclk_in` ve
+   `spi_miso` aynı yapıda debounce edilir. Tek bir glitch fazladan kenar sayımına,
+   yani tüm baytın kaymasına yol açar. İki sinyal aynı filtreden geçtiği için
+   aralarındaki kenar hizası korunur.
+2. **Bit sayısına göre yakalama** — veri, okuma penceresi kapandığında değil,
+   sayaç beklenen bit sayısına (24 + 8N) ulaştığı anda kilitlenir. Böylece dönen
+   son kenar geç gelse bile bayt kaymaz; pencerenin ne zaman kapandığı önemsizleşir.
+3. **`rd_short_err[6:0]`** — beklenen bit sayısına hiç ulaşılamazsa ilgili bus için
+   kalıcı olarak yanar. Donanımda "veri neden kaydı" sorusunun cevabı budur:
+   yanıyorsa dönen kenarlar pencereye sığmıyor demektir.
+
+Pencere koşulu:
+
+```
+G_CS_HOLD_CYCLES + G_RX_SETTLE_CYCLES
+    > ring_gecikmesi / T_clk + 2 (senkronizasyon) + G_RX_FILTER_LEN
+```
+
+Varsayılan `G_RX_SETTLE_CYCLES = 64` (100 MHz'de 640 ns), 8 çiplik gerçek zincirin
+~26 ns gecikmesine karşı bol paydır. Okumalar seyrek olduğu için geniş bırakmanın
+maliyeti yoktur.
 
 ## Donanım bağlantısı — ÖNEMLİ
 
@@ -266,7 +296,8 @@ Generic'ler (`admv48281_top`):
 | `G_TRX_DELAY_CYCLES` | 100 | LOAD → TRX bekleme (100 MHz'de 1 µs) |
 | `G_RESET_WAIT` | 1000 | soft reset sonrası bekleme (clk) |
 | `G_POLL_LIMIT` | 2000 | NVM polling deneme sınırı |
-| `G_RX_SETTLE_CYCLES` | 32 | ring dönüş gecikmesi payı |
+| `G_RX_SETTLE_CYCLES` | 64 | okuma penceresi payı (yukarıdaki koşula bakın) |
+| `G_RX_FILTER_LEN` | 3 | dönen CLK_OUT/SDO giriş filtresi; 1 = filtre yok |
 
 Bant seçimi: `C_INIT_TABLE` Band 0 / geniş bant sütunudur. Band 1 ve dar bant
 farkları tablonun hemen üstündeki yorumda listelidir.
@@ -286,7 +317,7 @@ ModelSim/Questa, Riviera-PRO, Xcelium). Faydalı bayraklar: `-l` test listesi,
 `-v` ayrıntılı çıktı, `-p 4` paralel koşum, `--gui` dalga formu,
 `python run.py "*test_rx_beam*"` tek test.
 
-17 test (her biri ayrı simülasyonda, temiz reset'ten başlar):
+18 test (her biri ayrı simülasyonda, temiz reset'ten başlar):
 
 | Test | Doğruladığı |
 |---|---|
@@ -300,6 +331,7 @@ ModelSim/Questa, Riviera-PRO, Xcelium). Faydalı bayraklar: `-l` test listesi,
 | `test_load_trig_early` | SPI yazma bitmeden gelen `load_trig` kuyruğa alınıp bir kez uygulanıyor |
 | `test_load_pulse_width` × 2 config | LOAD darbe genişliği UG-2293 minimumunu (3.75 ns) sağlıyor ve gereğinden geniş değil. Config'ler: 100 MHz (10 ns) ve 500 MHz (4 ns) |
 | `test_trx_sequence` | Açılışta TRX=0; RX beam→0, TX beam→1, tekrar RX→0. TRX geçişi LOAD'dan **sonra** ve `G_TRX_DELAY_CYCLES` gecikmesiyle (ölçülen 1.03 µs) |
+| `test_rx_window_too_short` | Okuma penceresi ring gecikmesinden küçükken veri **sessizce kaymıyor**, `rd_short_err` yanıyor |
 | `test_static_bus` | Statik bus: açılış beam'i gerçekten yazılıyor (model sentinel'i 0xAA→tablo), init'te +1 LOAD, trig'lerde **hiç CS aktivitesi yok**, bloklar değişmiyor, TRX ve senkron LOAD takip ediyor |
 | `test_nvm_timeout` | NVM bit[6] hiç gelmezse `init_err` |
 
@@ -316,6 +348,7 @@ testlerde hata veriyor, diğerleri geçmeye devam ediyor:
 | Statik açılış beam'inde TX yazımının atlanması | `test_init_sequence` + `test_static_bus` |
 | Statik bus'ın trig'de beam yazması | `test_static_bus` |
 | Statik yazımların hepsinin tek çipin adresiyle gitmesi | `test_init_sequence` + `test_static_bus` (adreslenmeyen çipler sentinel'de kalır) |
+| Okuma verisinin bit sayısı yerine pencere kapanışına göre yakalanması | `test_rx_window_too_short` |
 
 ### Klasik testbench (VUnit'siz)
 

@@ -32,7 +32,13 @@ entity spi_master is
     G_CS_SETUP_CYCLES  : natural := 4;   -- CS dustukten sonra ilk SCLK'a kadar (tS)
     G_CS_HOLD_CYCLES   : natural := 4;   -- son SCLK'tan sonra CS yuksek olana kadar (tH)
     G_CS_GAP_CYCLES    : natural := 8;   -- iki frame arasi CS yuksek suresi
-    G_RX_SETTLE_CYCLES : natural := 32   -- ring donus gecikmesi payi (okuma)
+    -- Okuma penceresinin, son SCLK'tan sonra ne kadar acik kalacagi. Donen
+    -- son kenarin yakalanabilmesi icin sunu karsilamalidir:
+    --   G_CS_HOLD_CYCLES + G_RX_SETTLE_CYCLES
+    --     > ring_gecikmesi/T_clk + 2 (senkronizasyon) + G_RX_FILTER_LEN
+    -- Okumalar seyrek oldugu icin genis birakmanin maliyeti yoktur.
+    -- 8 ciplik gercek zincirde gecikme ~26 ns; 64 clock @100 MHz = 640 ns.
+    G_RX_SETTLE_CYCLES : natural := 64
   );
   port (
     clk   : in std_logic;
@@ -56,6 +62,9 @@ entity spi_master is
 
     -- okuma penceresi: spi_slave bu sinyal '1' iken donen clock ile ornekler
     rd_arm : out std_logic;
+    -- bu islemde beklenen toplam bit sayisi; spi_slave veriyi bu sayaca gore
+    -- kilitler (pencere kapanisina gore degil), boylece bayt kaymasi olmaz
+    rd_nbits : out std_logic_vector(7 downto 0);
 
     busy : out std_logic;
     done : out std_logic   -- islem bitisinde 1 clock darbe
@@ -83,8 +92,9 @@ architecture rtl of spi_master is
   signal byte_idx    : unsigned(11 downto 0) := (others => '0');
   signal str_idx_r   : unsigned(8 downto 0) := (others => '0');
 
-  signal wait_cnt : unsigned(7 downto 0) := (others => '0');
-  signal rd_arm_r : std_logic := '0';
+  signal wait_cnt : unsigned(15 downto 0) := (others => '0');
+  signal rd_arm_r   : std_logic := '0';
+  signal rd_nbits_r : std_logic_vector(7 downto 0) := (others => '0');
   signal done_r   : std_logic := '0';
 
   -- byte_idx'e gore siradaki byte'i sec
@@ -118,10 +128,20 @@ architecture rtl of spi_master is
 
 begin
 
+  -- Donen CLK_OUT sistem saatinde asiri orneklenerek kenari tespit edilir;
+  -- bir SCLK periyodu 2*G_CLK_DIV_RD sistem clock'udur. Kenarlarin guvenilir
+  -- yakalanmasi ve giris filtresinin fazi gecirebilmesi icin bu oran yeterli
+  -- olmalidir.
+  assert G_CLK_DIV_RD >= 4
+    report "G_CLK_DIV_RD >= 4 olmalidir: donen CLK_OUT'un asiri ornekleme orani "
+           & "yetersiz, okumada bit kaymasi olusur"
+    severity failure;
+
   spi_sclk  <= sclk_r;
   spi_mosi  <= mosi_r;
   spi_cs_n  <= cs_n_r;
   rd_arm    <= rd_arm_r;
+  rd_nbits  <= rd_nbits_r;
   str_idx   <= std_logic_vector(str_idx_r);
   cmd_ready <= '1' when state = ST_IDLE else '0';
   busy      <= '0' when state = ST_IDLE else '1';
@@ -139,6 +159,7 @@ begin
         cs_n_r      <= '1';
         mosi_r      <= '0';
         rd_arm_r    <= '0';
+        rd_nbits_r  <= (others => '0');
         div_cnt     <= (others => '0');
         byte_idx    <= (others => '0');
         str_idx_r   <= (others => '0');
@@ -166,6 +187,10 @@ begin
               if cmd_mode = C_MODE_READ then
                 div_max  <= to_unsigned(G_CLK_DIV_RD, 8);
                 rd_arm_r <= '1';
+                -- 24 bit header + 8 bit x cmd_len
+                rd_nbits_r <= std_logic_vector(
+                                to_unsigned(24, 8)
+                                + resize(shift_left(unsigned(cmd_len(4 downto 0)), 3), 8));
               else
                 div_max  <= to_unsigned(G_CLK_DIV_WR, 8);
                 rd_arm_r <= '0';
@@ -197,7 +222,7 @@ begin
               mosi_r <= nb(7);
             end if;
 
-            if wait_cnt = to_unsigned(G_CS_SETUP_CYCLES, 8) then
+            if wait_cnt = to_unsigned(G_CS_SETUP_CYCLES, 16) then
               wait_cnt <= (others => '0');
               state    <= ST_SHIFT;
             else
@@ -246,7 +271,7 @@ begin
           -- son SCLK ile CS'in yukselmesi arasindaki tutma suresi (tH)
           when ST_HOLD =>
             sclk_r <= '0';
-            if wait_cnt = to_unsigned(G_CS_HOLD_CYCLES, 8) then
+            if wait_cnt = to_unsigned(G_CS_HOLD_CYCLES, 16) then
               wait_cnt <= (others => '0');
               if mode_r = C_MODE_READ then
                 state <= ST_SETTLE;
@@ -262,7 +287,7 @@ begin
           -- Ring uzerinden donen SCLK/SDO kontrolcuye gec ulasir; son bitler
           -- yakalanana kadar CS'i dusuk ve okuma penceresini acik tutuyoruz.
           when ST_SETTLE =>
-            if wait_cnt = to_unsigned(G_RX_SETTLE_CYCLES, 8) then
+            if wait_cnt = to_unsigned(G_RX_SETTLE_CYCLES, 16) then
               wait_cnt <= (others => '0');
               rd_arm_r <= '0';        -- dusen kenar: spi_slave veriyi gecerli yapar
               cs_n_r   <= '1';
@@ -274,7 +299,7 @@ begin
           --------------------------------------------------------------------
           when ST_GAP =>
             cs_n_r <= '1';
-            if wait_cnt = to_unsigned(G_CS_GAP_CYCLES, 8) then
+            if wait_cnt = to_unsigned(G_CS_GAP_CYCLES, 16) then
               wait_cnt <= (others => '0');
               done_r   <= '1';
               state    <= ST_IDLE;
