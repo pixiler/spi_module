@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="ADMV48281 SPI surucu modulunun calisma akisi, sinyal arayuzu, veri formatlari ve timing diyagramlari.">
+<title>ADMV48281 Sürücü Referansı</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#F6F8FA; --panel:#FFFFFF; --ink:#1B2430; --muted:#5C6875;
+  --line:#D9DFE7; --grid:#EBEFF4; --accent:#B25325; --accent-ink:#8F3F17;
+  --ok:#1E7A4D; --chip-bg:#EEF1F5; --code-bg:#EFF2F6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#12161C; --panel:#1A202A; --ink:#E2E8F0; --muted:#93A0AF;
+    --line:#2B3542; --grid:#232C38; --accent:#E08A52; --accent-ink:#F0A878;
+    --ok:#46B183; --chip-bg:#222A36; --code-bg:#202934;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#12161C; --panel:#1A202A; --ink:#E2E8F0; --muted:#93A0AF;
+  --line:#2B3542; --grid:#232C38; --accent:#E08A52; --accent-ink:#F0A878;
+  --ok:#46B183; --chip-bg:#222A36; --code-bg:#202934;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;
+  font-size:15.5px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:920px; margin:0 auto; padding:48px 24px 80px}
+code, .mono{font-family:'IBM Plex Mono',ui-monospace,Consolas,monospace}
+code{background:var(--code-bg); padding:1px 5px; border-radius:3px; font-size:.86em}
+h1{font-size:2rem; font-weight:700; letter-spacing:-.02em; margin:.2em 0 .25em; text-wrap:balance}
+h2{font-size:1.28rem; font-weight:600; letter-spacing:-.01em; margin:0 0 .6em; text-wrap:balance}
+h3{font-size:1.02rem; font-weight:600; margin:1.6em 0 .5em}
+p{margin:.55em 0; max-width:68ch}
+.sub{color:var(--muted); font-size:1.02rem; max-width:72ch}
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace; font-size:.72rem; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--accent);
+  margin:0 0 .5em;
+}
+section{margin-top:60px; padding-top:28px; border-top:1px solid var(--line)}
+header .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:18px}
+.chip{
+  font-family:'IBM Plex Mono',monospace; font-size:.78rem; font-weight:500;
+  background:var(--chip-bg); border:1px solid var(--line); border-radius:99px;
+  padding:4px 12px; white-space:nowrap;
+}
+figure{margin:1.4em 0; background:var(--panel); border:1px solid var(--line);
+  border-radius:8px; padding:18px 16px 10px; overflow-x:auto}
+figure svg{display:block; min-width:760px; max-width:100%; height:auto; margin:0 auto}
+figcaption{font-size:.84rem; color:var(--muted); margin-top:10px; padding:0 4px;
+  border-top:1px dashed var(--line); padding-top:10px}
+table{border-collapse:collapse; width:100%; font-size:.9rem; margin:1em 0}
+th{font-family:'IBM Plex Mono',monospace; font-size:.72rem; font-weight:600;
+  text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
+  text-align:left; padding:8px 10px; border-bottom:2px solid var(--line)}
+td{padding:7px 10px; border-bottom:1px solid var(--grid); vertical-align:top}
+td:first-child{white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+.num{font-variant-numeric:tabular-nums; font-family:'IBM Plex Mono',monospace; font-size:.86em}
+.dir{font-family:'IBM Plex Mono',monospace; font-size:.72rem; font-weight:600;
+  border-radius:3px; padding:1px 6px; white-space:nowrap}
+.dir.in{color:var(--ok); background:color-mix(in srgb, var(--ok) 12%, transparent)}
+.dir.out{color:var(--accent-ink); background:color-mix(in srgb, var(--accent) 12%, transparent)}
+.note{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--accent);
+  border-radius:0 6px 6px 0; padding:10px 16px; margin:1.2em 0; font-size:.92rem; max-width:none}
+.note p{max-width:none}
+.tblwrap{overflow-x:auto}
+/* SVG siniflari */
+.bx{fill:var(--panel); stroke:var(--line); stroke-width:1.2}
+.bxi{fill:var(--chip-bg); stroke:var(--line); stroke-width:1}
+.bxa{fill:color-mix(in srgb, var(--accent) 9%, var(--panel)); stroke:var(--accent); stroke-width:1.2}
+.bxd{fill:none; stroke:var(--muted); stroke-width:1.1; stroke-dasharray:4 3}
+.tt{font-family:'IBM Plex Sans',sans-serif; font-size:12.5px; fill:var(--ink); font-weight:600}
+.tl{font-family:'IBM Plex Mono',monospace; font-size:11.5px; fill:var(--ink)}
+.tm{font-family:'IBM Plex Mono',monospace; font-size:10.5px; fill:var(--muted)}
+.ta{font-family:'IBM Plex Mono',monospace; font-size:10.5px; fill:var(--accent); font-weight:600}
+.ln{stroke:var(--ink); stroke-width:1.3; fill:none}
+.lna{stroke:var(--accent); stroke-width:1.5; fill:none}
+.lnm{stroke:var(--muted); stroke-width:1; fill:none}
+.lnd{stroke:var(--muted); stroke-width:1; fill:none; stroke-dasharray:3 3}
+.wv{stroke:var(--ink); stroke-width:1.5; fill:none}
+.wva{stroke:var(--accent); stroke-width:1.7; fill:none}
+.wvg{stroke:var(--grid); stroke-width:1; fill:none}
+.busfill{fill:var(--chip-bg)}
+.dim{stroke:var(--muted); stroke-width:1; fill:none}
+footer{margin-top:70px; padding-top:20px; border-top:1px solid var(--line);
+  color:var(--muted); font-size:.84rem}
+footer .mono{font-size:.8rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <p class="eyebrow">VHDL Modül Referansı · UG-2293 Rev. Sp0</p>
+  <h1>ADMV48281 Sürücü Referansı</h1>
+  <p class="sub">7 SPI bus üzerinde 52 beamformer'ı ring konfigürasyonunda yöneten
+  <code>admv48281_top</code> modülünün çalışma akışı, sinyalleri, veri formatları ve zamanlaması.</p>
+  <div class="chips">
+    <span class="chip">7 bus · 6×8 + 1×4 çip</span>
+    <span class="chip">ring modu</span>
+    <span class="chip">direct beam (bypass)</span>
+    <span class="chip">AXI4-Stream 32 bit</span>
+    <span class="chip">bus 6 statik</span>
+    <span class="chip">VUnit 17/17 ✓</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<section>
+<p class="eyebrow">Mimari</p>
+<h2>Genel bakış</h2>
+<p>Modül üç katmandan oluşur: üst modül AXI-Stream paketini bus RAM'lerine dağıtır ve
+tur sıralamasını (SPI yazma → LOAD → TRX) yürütür; her bus kontrolcüsü kendi ring
+zincirini sürer; SPI master/slave çifti fiziksel protokolü işler. Ring bir
+<em>repeater zinciridir</em>: zincirdeki tüm çipler aynı veriyi görür, ayrışmayı
+yalnızca frame başlığındaki chip address sağlar.</p>
+
+<figure>
+<svg viewBox="0 0 940 400" role="img" aria-label="Blok diyagramı: MicroBlaze, admv48281_top (demux, FSM, 7 bus kontrolcüsü) ve ring zincirleri">
+  <defs>
+    <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="var(--ink)"/>
+    </marker>
+    <marker id="ara" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="var(--accent)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="var(--muted)"/>
+    </marker>
+  </defs>
+
+  <!-- MicroBlaze -->
+  <rect class="bx" x="16" y="120" width="128" height="150" rx="6"/>
+  <text class="tt" x="80" y="145" text-anchor="middle">MicroBlaze</text>
+  <text class="tm" x="80" y="162" text-anchor="middle">/ PS yazılımı</text>
+  <text class="tm" x="80" y="196" text-anchor="middle">beam hesabı</text>
+  <text class="tm" x="80" y="212" text-anchor="middle">tetik üretimi</text>
+  <text class="tm" x="80" y="228" text-anchor="middle">power-up GPIO</text>
+  <text class="tm" x="80" y="244" text-anchor="middle">(RST, CHIP_EN…)</text>
+
+  <!-- top module -->
+  <rect class="bx" x="196" y="34" width="330" height="352" rx="8"/>
+  <text class="tt" x="212" y="58">admv48281_top</text>
+
+  <rect class="bxi" x="212" y="76" width="140" height="46" rx="4"/>
+  <text class="tl" x="282" y="95" text-anchor="middle">AXIS demux</text>
+  <text class="tm" x="282" y="111" text-anchor="middle">384 kelime → 6 RAM</text>
+
+  <rect class="bxi" x="212" y="140" width="140" height="62" rx="4"/>
+  <text class="tl" x="282" y="160" text-anchor="middle">tur FSM</text>
+  <text class="tm" x="282" y="175" text-anchor="middle">trig · load_trig</text>
+  <text class="tm" x="282" y="190" text-anchor="middle">LOAD → TRX sırası</text>
+
+  <rect class="bxi" x="212" y="220" width="140" height="46" rx="4"/>
+  <text class="tl" x="282" y="240" text-anchor="middle">okuma yönl.</text>
+  <text class="tm" x="282" y="256" text-anchor="middle">rd_* → bus seçimi</text>
+
+  <!-- bus ctrl stack -->
+  <rect class="bx" x="374" y="76" width="136" height="236" rx="6"/>
+  <text class="tl" x="442" y="96" text-anchor="middle">admv_bus_ctrl</text>
+  <text class="tm" x="442" y="111" text-anchor="middle">× 7 örnek</text>
+  <rect class="bxi" x="386" y="124" width="112" height="30" rx="3"/>
+  <text class="tm" x="442" y="143" text-anchor="middle">spi_master</text>
+  <rect class="bxi" x="386" y="162" width="112" height="30" rx="3"/>
+  <text class="tm" x="442" y="181" text-anchor="middle">spi_slave (dönüş)</text>
+  <rect class="bxi" x="386" y="200" width="112" height="30" rx="3"/>
+  <text class="tm" x="442" y="219" text-anchor="middle">beam RAM 64×32</text>
+  <rect class="bxi" x="386" y="238" width="112" height="30" rx="3"/>
+  <text class="tm" x="442" y="257" text-anchor="middle">init + faz ROM</text>
+  <text class="tm" x="442" y="296" text-anchor="middle">init sekansı FSM</text>
+
+  <rect class="bxd" x="374" y="326" width="136" height="46" rx="6"/>
+  <text class="tm" x="442" y="345" text-anchor="middle">bus 6: statik</text>
+  <text class="tm" x="442" y="360" text-anchor="middle">trig'de yazmaz</text>
+
+  <!-- ublaze -> top arrows -->
+  <line class="ln" x1="144" y1="150" x2="194" y2="150" marker-end="url(#ar)"/>
+  <text class="tm" x="150" y="142">AXIS 32b</text>
+  <line class="lna" x1="144" y1="186" x2="194" y2="186" marker-end="url(#ara)"/>
+  <text class="ta" x="146" y="178">trig·load_trig</text>
+  <line class="lnm" x1="194" y1="228" x2="144" y2="228" marker-end="url(#arm)"/>
+  <text class="tm" x="148" y="244">durum</text>
+
+  <!-- ring chain bus 0 -->
+  <text class="tt" x="560" y="58">Ring zinciri (bus 0..5: 8 çip)</text>
+  <rect class="bx" x="560" y="76" width="64" height="52" rx="5"/>
+  <text class="tl" x="592" y="98" text-anchor="middle">çip 1</text>
+  <text class="tm" x="592" y="114" text-anchor="middle">addr 1</text>
+  <rect class="bx" x="664" y="76" width="64" height="52" rx="5"/>
+  <text class="tl" x="696" y="98" text-anchor="middle">çip 2</text>
+  <text class="tm" x="696" y="114" text-anchor="middle">addr 2</text>
+  <text class="tl" x="768" y="106">…</text>
+  <rect class="bx" x="800" y="76" width="64" height="52" rx="5"/>
+  <text class="tl" x="832" y="98" text-anchor="middle">çip 8</text>
+  <text class="tm" x="832" y="114" text-anchor="middle">addr 8</text>
+
+  <line class="ln" x1="512" y1="102" x2="558" y2="102" marker-end="url(#ar)"/>
+  <text class="tm" x="514" y="94">SCLK·MOSI</text>
+  <line class="ln" x1="624" y1="102" x2="662" y2="102" marker-end="url(#ar)"/>
+  <text class="tm" x="628" y="94">CLK_OUT·SDO</text>
+  <line class="ln" x1="728" y1="102" x2="798" y2="102" marker-end="url(#ar)"/>
+
+  <!-- return path -->
+  <path class="lnd" d="M864,128 V158 H520" marker-end="url(#arm)"/>
+  <text class="tm" x="560" y="152">son çipin CLK_OUT·SDO → spi_sclk_in·spi_miso (dönüş)</text>
+
+  <!-- shared lines -->
+  <path class="lna" d="M512,190 H700 V170" marker-end="url(#ara)"/>
+  <text class="ta" x="546" y="184">CS·LOAD·TRX — zincirdeki tüm çiplere ortak</text>
+
+  <!-- bus6 chain -->
+  <text class="tt" x="560" y="238">Bus 6 (statik: 4 çip)</text>
+  <rect class="bxd" x="560" y="252" width="58" height="46" rx="5"/>
+  <text class="tl" x="589" y="272" text-anchor="middle">çip 1</text>
+  <rect class="bxd" x="632" y="252" width="58" height="46" rx="5"/>
+  <text class="tl" x="661" y="272" text-anchor="middle">çip 2</text>
+  <rect class="bxd" x="704" y="252" width="58" height="46" rx="5"/>
+  <text class="tl" x="733" y="272" text-anchor="middle">çip 3</text>
+  <rect class="bxd" x="776" y="252" width="58" height="46" rx="5"/>
+  <text class="tl" x="805" y="272" text-anchor="middle">çip 4</text>
+  <text class="tm" x="560" y="322">açılışta C_STATIC_BEAM_RX/TX çip çip yazılır + tek LOAD;</text>
+  <text class="tm" x="560" y="338">trig'lerde SPI yok — TRX ve senkron LOAD yine sürülür</text>
+  <line class="lnm" x1="512" y1="275" x2="558" y2="275" marker-end="url(#arm)"/>
+
+  <text class="tm" x="560" y="376">× 5 özdeş bus daha (bus 1..5)</text>
+</svg>
+<figcaption>Veri yolu: MicroBlaze beam paketini AXI-Stream'den gönderir; üst modül paketi
+bus RAM'lerine dağıtır, 7 bus kontrolcüsü kendi zincirlerini paralel sürer. Ring dönüşü
+(kesikli) yalnızca okuma sırasında kullanılır.</figcaption>
+</figure>
+
+<div class="note"><p><strong>Ring modunun sonucu:</strong> zincirdeki her çip aynı bitleri
+gördüğü için farklı çiplere farklı gain/phase yazmak çip başına ayrı transaction gerektirir
+(8 çip × 280 SCLK). Broadcast adresle (<code>0000</code>) okuma yapılamaz — NVM
+kalibrasyon polling'i bu yüzden çip çip yapılır.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+<p class="eyebrow">Akış</p>
+<h2>Çalışma akışı</h2>
+<p>İki faz vardır: <code>enable</code> ile bir kez koşan <strong>init</strong> ve her
+<code>trig</code>'de tekrarlanan <strong>beam turu</strong>. Turuncu ile işaretli adımlar
+dışarıdan (yazılımdan) beklenen sinyallerdir.</p>
+
+<figure>
+<svg viewBox="0 0 940 480" role="img" aria-label="Akış diyagramı: init sekansı ve beam turu döngüsü">
+  <defs>
+    <marker id="fa" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="var(--ink)"/>
+    </marker>
+    <marker id="faa" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="var(--accent)"/>
+    </marker>
+  </defs>
+
+  <!-- INIT column -->
+  <text class="tt" x="230" y="26" text-anchor="middle">INIT — enable = '1' sonrası, 7 bus paralel</text>
+
+  <rect class="bxa" x="150" y="40" width="160" height="30" rx="15"/>
+  <text class="ta" x="230" y="60" text-anchor="middle">enable ← yazılım</text>
+  <line class="ln" x1="230" y1="70" x2="230" y2="86" marker-end="url(#fa)"/>
+
+  <rect class="bx" x="80" y="88" width="300" height="48" rx="6"/>
+  <text class="tl" x="230" y="108" text-anchor="middle">SPI init tablosu · broadcast</text>
+  <text class="tm" x="230" y="124" text-anchor="middle">54 kayıt: 0x000←BD, NVM reset, Table 12 bias</text>
+  <line class="ln" x1="230" y1="136" x2="230" y2="152" marker-end="url(#fa)"/>
+
+  <rect class="bx" x="80" y="154" width="300" height="48" rx="6"/>
+  <text class="tl" x="230" y="174" text-anchor="middle">Faz SRAM · Table 11</text>
+  <text class="tm" x="230" y="190" text-anchor="middle">0x480 + 0x580 · 2 × 128 byte streaming</text>
+  <line class="ln" x1="230" y1="202" x2="230" y2="218" marker-end="url(#fa)"/>
+
+  <rect class="bx" x="80" y="220" width="300" height="62" rx="6"/>
+  <text class="tl" x="230" y="240" text-anchor="middle">NVM kalibrasyon (merge)</text>
+  <text class="tm" x="230" y="256" text-anchor="middle">0x05F←01 · ≥10354 SCLK (CS pasif)</text>
+  <text class="tm" x="230" y="271" text-anchor="middle">her çipten 0x01A bit6 poll · 0x05F←00</text>
+  <line class="ln" x1="230" y1="282" x2="230" y2="298" marker-end="url(#fa)"/>
+
+  <rect class="bxd" x="80" y="300" width="300" height="48" rx="6"/>
+  <text class="tl" x="230" y="320" text-anchor="middle">yalnız statik bus (bus 6)</text>
+  <text class="tm" x="230" y="336" text-anchor="middle">açılış beam'i çip çip (RX+TX) + tek LOAD</text>
+  <line class="ln" x1="230" y1="348" x2="230" y2="364" marker-end="url(#fa)"/>
+
+  <rect class="bx" x="150" y="366" width="160" height="30" rx="15" style="stroke:var(--ok)"/>
+  <text class="tl" x="230" y="386" text-anchor="middle" style="fill:var(--ok)">init_done = '1'</text>
+
+  <line class="lnd" x1="310" y1="381" x2="560" y2="381"/>
+  <path class="lnd" d="M560,381 V96" marker-end="url(#fa)"/>
+
+  <!-- BEAM column -->
+  <text class="tt" x="720" y="26" text-anchor="middle">BEAM TURU — her trig'de</text>
+
+  <rect class="bx" x="640" y="64" width="160" height="30" rx="15"/>
+  <text class="tl" x="720" y="84" text-anchor="middle">IDLE</text>
+  <path class="lnd" d="M640,79 H562 V120 H586" marker-end="url(#fa)"/>
+  <text class="tm" x="500" y="112">rd_req → tek</text>
+  <text class="tm" x="500" y="126">register okuma</text>
+  <line class="lna" x1="720" y1="94" x2="720" y2="112" marker-end="url(#faa)"/>
+  <text class="ta" x="732" y="108">trig ↑ · rx_tx_sel örneklenir</text>
+
+  <rect class="bx" x="590" y="114" width="260" height="46" rx="6"/>
+  <text class="tl" x="720" y="133" text-anchor="middle">AXIS paketi al</text>
+  <text class="tm" x="720" y="149" text-anchor="middle">384 × 32 bit → bus RAM (store &amp; forward)</text>
+  <line class="ln" x1="720" y1="160" x2="720" y2="176" marker-end="url(#fa)"/>
+
+  <rect class="bx" x="590" y="178" width="260" height="46" rx="6"/>
+  <text class="tl" x="720" y="197" text-anchor="middle">SPI yazma · 7 bus paralel</text>
+  <text class="tm" x="720" y="213" text-anchor="middle">çip başına 24b başlık + 32B · 0x200/0x240</text>
+  <line class="ln" x1="720" y1="224" x2="720" y2="240" marker-end="url(#fa)"/>
+
+  <rect class="bx" x="590" y="242" width="260" height="40" rx="6"/>
+  <text class="tl" x="720" y="258" text-anchor="middle">load_pending = '1'</text>
+  <text class="tm" x="720" y="274" text-anchor="middle">tüm buslar hazır, LOAD bekleniyor</text>
+  <line class="lna" x1="720" y1="282" x2="720" y2="300" marker-end="url(#faa)"/>
+  <text class="ta" x="732" y="296">load_trig ↑ (kuyruklanır)</text>
+
+  <rect class="bx" x="590" y="302" width="260" height="46" rx="6"/>
+  <text class="tl" x="720" y="321" text-anchor="middle">LOAD darbesi · 7 hat eş zamanlı</text>
+  <text class="tm" x="720" y="337" text-anchor="middle">genişlik spec'ten: yarım ≥ 3.75 ns → load_done</text>
+  <line class="ln" x1="720" y1="348" x2="720" y2="364" marker-end="url(#fa)"/>
+
+  <rect class="bx" x="590" y="366" width="260" height="46" rx="6"/>
+  <text class="tl" x="720" y="385" text-anchor="middle">TRX geçişi</text>
+  <text class="tm" x="720" y="401" text-anchor="middle">G_TRX_DELAY_CYCLES sonra trx_out ← rx_tx_sel</text>
+  <line class="ln" x1="720" y1="412" x2="720" y2="428" marker-end="url(#fa)"/>
+
+  <rect class="bx" x="640" y="430" width="160" height="30" rx="15" style="stroke:var(--ok)"/>
+  <text class="tl" x="720" y="450" text-anchor="middle" style="fill:var(--ok)">beam_done ↑</text>
+
+  <path class="ln" d="M800,445 H880 V79 H802" marker-end="url(#fa)"/>
+  <text class="tm" x="890" y="266" transform="rotate(90 890 266)" text-anchor="middle">sonraki trig</text>
+
+</svg>
+<figcaption>Sol: bir kez koşan init sekansı (ölçülen süre ~694 µs). Sağ: her tetikte dönen
+beam turu. Turuncu geçişler yazılımdan beklenen sinyaller; kesikli kutu yalnız statik
+bus'ta koşar. Sıralama garantisi <strong>SPI yazma → LOAD → TRX</strong>'tir: TRX pini,
+beam verisi çalışan registerlara yüklenmeden asla yön değiştirmez. Tur boyunca
+<code>rd_req</code> kabul edilmez (UG-2293 Figure 10 koşulu).</figcaption>
+</figure>
+</section>
+
+<!-- ============================================================ -->
+<section>
+<p class="eyebrow">Arayüz</p>
+<h2>Sinyaller</h2>
+
+<h3>Kontrol girişleri</h3>
+<div class="tblwrap"><table>
+<thead><tr><th>Sinyal</th><th>Yön</th><th>Açıklama</th></tr></thead>
+<tbody>
+<tr><td><code>clk</code> / <code>rst_n</code></td><td><span class="dir in">in</span></td>
+<td>Sistem saati (<code>G_CLK_FREQ_HZ</code>, varsayılan 100 MHz) ve aktif-düşük senkron reset.</td></tr>
+<tr><td><code>enable</code></td><td><span class="dir in">in</span></td>
+<td>Seviye. ADMV power-up sırası (RST, CHIP_EN…) tamamlandıktan sonra '1' yapılır; init sekansını başlatır.</td></tr>
+<tr><td><code>trig</code></td><td><span class="dir in">in</span></td>
+<td>Yükselen kenar. Beam turunu başlatır; <code>rx_tx_sel</code> bu anda örneklenip kilitlenir.</td></tr>
+<tr><td><code>rx_tx_sel</code></td><td><span class="dir in">in</span></td>
+<td>'0' = RX direct beam (<code>0x200</code>), '1' = TX direct beam (<code>0x240</code>). Tur sonunda TRX pinine de yansır.</td></tr>
+<tr><td><code>load_trig</code></td><td><span class="dir in">in</span></td>
+<td>Yükselen kenar. LOAD toggle'ını tetikler. SPI yazma bitmeden gelirse <em>kuyruğa alınır</em>, yazma biter bitmez uygulanır.</td></tr>
+</tbody></table></div>
+
+<h3>Durum çıkışları</h3>
+<div class="tblwrap"><table>
+<thead><tr><th>Sinyal</th><th>Tip</th><th>Açıklama</th></tr></thead>
+<tbody>
+<tr><td><code>init_done</code></td><td>seviye</td><td>7 bus da init + NVM kalibrasyonu bitirdi.</td></tr>
+<tr><td><code>init_err</code></td><td>seviye</td><td>NVM polling zaman aşımı (<code>G_POLL_LIMIT</code>). <code>enable</code>='0' ile temizlenir.</td></tr>
+<tr><td><code>busy</code></td><td>seviye</td><td>Init veya beam turu sürüyor.</td></tr>
+<tr><td><code>load_pending</code></td><td>seviye</td><td>SPI yazma bitti, <code>load_trig</code> bekleniyor.</td></tr>
+<tr><td><code>load_done</code></td><td>1 clk darbe</td><td>LOAD toggle periyodu tamamlandı.</td></tr>
+<tr><td><code>trx_updated</code></td><td>1 clk darbe</td><td><code>trx_out</code> güncellendi.</td></tr>
+<tr><td><code>beam_done</code></td><td>1 clk darbe</td><td>Beam turu tamamen bitti, modül IDLE'a döndü.</td></tr>
+<tr><td><code>axis_err</code></td><td>seviye</td><td>Paket uzunluğu / TLAST uyumsuzluğu (erken veya geç TLAST). Sonraki turda temizlenir.</td></tr>
+</tbody></table></div>
+
+<h3>AXI4-Stream slave (beam verisi)</h3>
+<div class="tblwrap"><table>
+<thead><tr><th>Sinyal</th><th>Yön</th><th>Açıklama</th></tr></thead>
+<tbody>
+<tr><td><code>s_axis_tdata[31:0]</code></td><td><span class="dir in">in</span></td><td>Little-endian: byte 0 = <code>tdata[7:0]</code>.</td></tr>
+<tr><td><code>s_axis_tvalid</code> / <code>tlast</code></td><td><span class="dir in">in</span></td><td>TLAST paketin 384. kelimesinde beklenir.</td></tr>
+<tr><td><code>s_axis_tready</code></td><td><span class="dir out">out</span></td><td>Yalnızca trig sonrası '1' (store &amp; forward) — trig'siz gönderilen veri bekletilir.</td></tr>
+</tbody></table></div>
+
+<h3>Kullanıcı SPI okuması <span class="tm" style="font-size:.8rem">(yalnızca IDLE'da kabul edilir)</span></h3>
+<div class="tblwrap"><table>
+<thead><tr><th>Sinyal</th><th>Yön</th><th>Açıklama</th></tr></thead>
+<tbody>
+<tr><td><code>rd_req</code></td><td><span class="dir in">in</span></td><td>Yükselen kenar; parametreler bu anda kilitlenir.</td></tr>
+<tr><td><code>rd_bus[2:0]</code> · <code>rd_chip[2:0]</code></td><td><span class="dir in">in</span></td><td>Bus 0..6 ve zincirdeki sıra (chip address tablodan bulunur).</td></tr>
+<tr><td><code>rd_addr[13:0]</code></td><td><span class="dir in">in</span></td><td>Register adresi. <code>≥ 0x400</code> (SRAM) ise komut otomatik iki kez gönderilir.</td></tr>
+<tr><td><code>rd_data[7:0]</code> · <code>rd_valid</code></td><td><span class="dir out">out</span></td><td>Sonuç + 1 clk geçerlilik darbesi.</td></tr>
+</tbody></table></div>
+
+<h3>SPI / TRX pinleri <span class="tm" style="font-size:.8rem">(bus başına, hepsi 1.8 V CMOS — toplam 49 pin)</span></h3>
+<div class="tblwrap"><table>
+<thead><tr><th>Sinyal</th><th>Yön</th><th>Bağlantı</th></tr></thead>
+<tbody>
+<tr><td><code>spi_sclk_out[6:0]</code> / <code>spi_mosi[6:0]</code></td><td><span class="dir out">out</span></td><td>Zincirdeki ilk çipin SCLK / SDIO pinine.</td></tr>
+<tr><td><code>spi_cs_n[6:0]</code> / <code>spi_load[6:0]</code></td><td><span class="dir out">out</span></td><td>Bus'taki tüm çiplere ortak CS ve LOAD.</td></tr>
+<tr><td><code>trx_out[6:0]</code></td><td><span class="dir out">out</span></td><td>TRX_V+TRX_H (kartta birleşik). '0' = receive, '1' = transmit. Açılışta '0'.</td></tr>
+<tr><td><code>spi_sclk_in[6:0]</code> / <code>spi_miso[6:0]</code></td><td><span class="dir in">in</span></td><td>Son çipin CLK_OUT / SDO dönüşü. Clock-capable pin gerekmez (aşırı örnekleme).</td></tr>
+</tbody></table></div>
+
+<h3>Başlıca generic'ler</h3>
+<div class="tblwrap"><table>
+<thead><tr><th>Generic</th><th>Varsayılan</th><th>Açıklama</th></tr></thead>
+<tbody>
+<tr><td><code>G_CLK_FREQ_HZ</code></td><td class="num">100 000 000</td><td>LOAD darbe genişliği bundan türetilir.</td></tr>
+<tr><td><code>G_CLK_DIV_WR</code> / <code>G_CLK_DIV_RD</code></td><td class="num">2 / 8</td><td><code>f_sclk = f_clk / (2·div)</code>. Okumada ≥ 4 (ring dönüş gecikmesi).</td></tr>
+<tr><td><code>G_NVM_BURST</code></td><td class="num">10 500</td><td>NVM merge clock sayısı (spec ≥ 10 354).</td></tr>
+<tr><td><code>G_LOAD_CYCLES</code></td><td class="num">0</td><td>0 = UG-2293 Table 2'den türet; spec altı değer elaborasyonda durur.</td></tr>
+<tr><td><code>G_TRX_DELAY_CYCLES</code></td><td class="num">100</td><td>LOAD → TRX beklemesi (1 µs @ 100 MHz). Datasheet'e göre ayarlanmalı.</td></tr>
+</tbody></table></div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+<p class="eyebrow">Veri</p>
+<h2>Beklenen veri formatları</h2>
+
+<h3>SPI frame'i (standart ADI protokolü)</h3>
+<figure>
+<svg viewBox="0 0 940 96" role="img" aria-label="32 bitlik SPI frame bit alanları">
+  <rect class="bxi" x="20"  y="26" width="70"  height="40"/>
+  <rect class="bxi" x="90"  y="26" width="150" height="40"/>
+  <rect class="bxi" x="240" y="26" width="160" height="40"/>
+  <rect class="bxi" x="400" y="26" width="330" height="40"/>
+  <rect class="bxa" x="730" y="26" width="190" height="40"/>
+  <text class="tm" x="24"  y="20">31</text>
+  <text class="tm" x="94"  y="20">30 : 27</text>
+  <text class="tm" x="244" y="20">26 : 22</text>
+  <text class="tm" x="404" y="20">21 : 8</text>
+  <text class="tm" x="734" y="20">7 : 0</text>
+  <text class="tl" x="55"  y="50" text-anchor="middle">R/W#</text>
+  <text class="tl" x="165" y="50" text-anchor="middle">CHIP_ADDR</text>
+  <text class="tl" x="320" y="50" text-anchor="middle">CHANNEL</text>
+  <text class="tl" x="565" y="50" text-anchor="middle">REG ADDR · A13:A0</text>
+  <text class="tl" x="825" y="50" text-anchor="middle">DATA</text>
+  <text class="tm" x="55"  y="84" text-anchor="middle">0=yaz 1=oku</text>
+  <text class="tm" x="165" y="84" text-anchor="middle">0000=broadcast</text>
+  <text class="tm" x="320" y="84" text-anchor="middle">00000=global</text>
+  <text class="tm" x="565" y="84" text-anchor="middle">MSB önce</text>
+  <text class="tm" x="825" y="84" text-anchor="middle">8 bit</text>
+</svg>
+<figcaption>32 bitlik standart frame. Streaming modda başlığın ilk 24 biti gönderilir,
+ardından N × 8 bit veri gelir; adres her byte'ta artar (ascending, <code>0x000←0xBD</code>).</figcaption>
+</figure>
+
+<h3>AXI-Stream beam paketi</h3>
+<p>Her trig'de <strong>384 kelime = 1536 byte</strong> beklenir; yalnızca dinamik buslar
+(0..5) pakette yer alır. C tarafındaki birebir karşılık:
+<code>uint8_t beam[6][8][32]</code> — bus, çip, byte.</p>
+
+<figure>
+<svg viewBox="0 0 940 268" role="img" aria-label="AXIS paket düzeni: 6 bus, çip ve byte açılımı">
+  <!-- packet bar -->
+  <text class="tm" x="20" y="20">paket · 384 kelime</text>
+  <rect class="bxi" x="20"  y="28" width="150" height="36"/>
+  <rect class="bxi" x="170" y="28" width="150" height="36"/>
+  <rect class="bxi" x="320" y="28" width="150" height="36"/>
+  <rect class="bxi" x="470" y="28" width="150" height="36"/>
+  <rect class="bxi" x="620" y="28" width="150" height="36"/>
+  <rect class="bxi" x="770" y="28" width="150" height="36"/>
+  <text class="tl" x="95"  y="50" text-anchor="middle">bus 0</text>
+  <text class="tl" x="245" y="50" text-anchor="middle">bus 1</text>
+  <text class="tl" x="395" y="50" text-anchor="middle">bus 2</text>
+  <text class="tl" x="545" y="50" text-anchor="middle">bus 3</text>
+  <text class="tl" x="695" y="50" text-anchor="middle">bus 4</text>
+  <text class="tl" x="845" y="50" text-anchor="middle">bus 5</text>
+  <text class="tm" x="95" y="78" text-anchor="middle">64 kelime</text>
+  <text class="tm" x="912" y="78" text-anchor="end">TLAST → son kelimede</text>
+
+  <line class="lnd" x1="20" y1="64" x2="20" y2="104"/>
+  <line class="lnd" x1="170" y1="64" x2="920" y2="104"/>
+
+  <!-- chip bar -->
+  <text class="tm" x="20" y="100">bus 0 · 8 çip</text>
+  <rect class="bxi" x="20"  y="108" width="112.5" height="34"/>
+  <rect class="bxi" x="132.5" y="108" width="112.5" height="34"/>
+  <rect class="bxi" x="245" y="108" width="112.5" height="34"/>
+  <rect class="bxi" x="357.5" y="108" width="112.5" height="34"/>
+  <rect class="bxi" x="470" y="108" width="112.5" height="34"/>
+  <rect class="bxi" x="582.5" y="108" width="112.5" height="34"/>
+  <rect class="bxi" x="695" y="108" width="112.5" height="34"/>
+  <rect class="bxi" x="807.5" y="108" width="112.5" height="34"/>
+  <text class="tm" x="76"  y="130" text-anchor="middle">çip 0 · 8 klm</text>
+  <text class="tm" x="188" y="130" text-anchor="middle">çip 1</text>
+  <text class="tm" x="301" y="130" text-anchor="middle">çip 2</text>
+  <text class="tm" x="414" y="130" text-anchor="middle">çip 3</text>
+  <text class="tm" x="526" y="130" text-anchor="middle">çip 4</text>
+  <text class="tm" x="639" y="130" text-anchor="middle">çip 5</text>
+  <text class="tm" x="751" y="130" text-anchor="middle">çip 6</text>
+  <text class="tm" x="864" y="130" text-anchor="middle">çip 7</text>
+
+  <line class="lnd" x1="20" y1="142" x2="20" y2="182"/>
+  <line class="lnd" x1="132.5" y1="142" x2="920" y2="182"/>
+
+  <!-- byte strip: 32 cells, alternating g/p pairs, 16 pairs -->
+  <text class="tm" x="20" y="178">çip 0 · 32 byte = direct beam bloğu (byte j → register 0x200+j ya da 0x240+j)</text>
+  <g>
+    <rect class="bxa" x="20"  y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="48.125" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="76.25" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="104.375" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="132.5" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="160.625" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="188.75" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="216.875" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="245" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="273.125" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="301.25" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="329.375" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="357.5" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="385.625" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="413.75" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="441.875" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="470" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="498.125" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="526.25" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="554.375" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="582.5" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="610.625" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="638.75" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="666.875" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="695" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="723.125" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="751.25" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="779.375" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="807.5" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="835.625" y="186" width="28.125" height="30"/>
+    <rect class="bxa" x="863.75" y="186" width="28.125" height="30"/>
+    <rect class="bxi" x="891.875" y="186" width="28.125" height="30"/>
+  </g>
+  <text class="tm" x="34"  y="206" text-anchor="middle">g</text>
+  <text class="tm" x="62"  y="206" text-anchor="middle">p</text>
+  <text class="tm" x="90"  y="206" text-anchor="middle">g</text>
+  <text class="tm" x="118" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="147" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="175" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="203" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="231" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="259" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="287" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="315" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="343" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="372" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="400" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="428" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="456" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="484" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="512" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="540" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="568" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="597" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="625" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="653" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="681" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="709" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="737" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="765" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="793" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="822" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="850" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="878" y="206" text-anchor="middle">g</text>
+  <text class="tm" x="906" y="206" text-anchor="middle">p</text>
+  <text class="tm" x="48"  y="236" text-anchor="middle">ch0V</text>
+  <text class="tm" x="104" y="236" text-anchor="middle">ch0H</text>
+  <text class="tm" x="160" y="236" text-anchor="middle">ch1V</text>
+  <text class="tm" x="217" y="236" text-anchor="middle">ch1H</text>
+  <text class="tm" x="273" y="236" text-anchor="middle">ch2V</text>
+  <text class="tm" x="329" y="236" text-anchor="middle">ch2H</text>
+  <text class="tm" x="385" y="236" text-anchor="middle">ch3V</text>
+  <text class="tm" x="442" y="236" text-anchor="middle">ch3H</text>
+  <text class="tm" x="498" y="236" text-anchor="middle">ch4V</text>
+  <text class="tm" x="554" y="236" text-anchor="middle">ch4H</text>
+  <text class="tm" x="610" y="236" text-anchor="middle">ch5V</text>
+  <text class="tm" x="667" y="236" text-anchor="middle">ch5H</text>
+  <text class="tm" x="723" y="236" text-anchor="middle">ch6V</text>
+  <text class="tm" x="779" y="236" text-anchor="middle">ch6H</text>
+  <text class="tm" x="835" y="236" text-anchor="middle">ch7V</text>
+  <text class="tm" x="892" y="236" text-anchor="middle">ch7H</text>
+  <text class="tm" x="20" y="262">g = gain indeksi (bit 5:0) · p = phase indeksi (bit 5:0) — UG-2293 Table 79–82</text>
+</svg>
+<figcaption>Paket açılımı: bus → çip → byte. Bir çipin 32 byte'ı, <code>rx_tx_sel</code>'e
+göre RX (<code>0x200</code>) veya TX (<code>0x240</code>) direct beam bloğuna birebir yazılır.</figcaption>
+</figure>
+
+<div class="note"><p><strong>Statik bus 6:</strong> pakette yer almaz. Açılışta
+<code>C_STATIC_BEAM_RX/TX</code> tabloları (çip başına 32 byte'lık satırlar,
+<code>admv48281_pkg.vhd</code>) çip çip yazılır ve tek LOAD ile yüklenir. Şu an tüm
+satırlar gain=0, phase=0.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+<p class="eyebrow">Zamanlama</p>
+<h2>Timing diyagramları</h2>
+
+<h3>Beam turu — uçtan uca</h3>
+<figure>
+<svg viewBox="0 0 940 604" role="img" aria-label="Beam turu timing diyagramı: trig'den beam_done'a tüm sinyaller">
+  <!-- dikey kilavuzlar -->
+  <line class="wvg" x1="208" y1="16" x2="208" y2="538"/>
+  <line class="wvg" x1="352" y1="16" x2="352" y2="538"/>
+  <line class="wvg" x1="566" y1="16" x2="566" y2="538"/>
+  <line class="wvg" x1="682" y1="16" x2="682" y2="538"/>
+  <line class="wvg" x1="718" y1="16" x2="718" y2="538"/>
+  <line class="wvg" x1="806" y1="16" x2="806" y2="538"/>
+
+  <!-- 0: tstate bus -->
+  <text class="tl" x="148" y="46" text-anchor="end">tstate</text>
+  <path class="wv" d="M160,30 H204 M212,30 H348 M356,30 H562 M570,30 H678 M686,30 H714 M722,30 H802 M810,30 H920"/>
+  <path class="wv" d="M160,54 H204 M212,54 H348 M356,54 H562 M570,54 H678 M686,54 H714 M722,54 H802 M810,54 H920"/>
+  <path class="wv" d="M204,30 L212,54 M204,54 L212,30 M348,30 L356,54 M348,54 L356,30 M562,30 L570,54 M562,54 L570,30 M678,30 L686,54 M678,54 L686,30 M714,30 L722,54 M714,54 L722,30 M802,30 L810,54 M802,54 L810,30"/>
+  <text class="tm" x="182" y="47" text-anchor="middle">IDLE</text>
+  <text class="tm" x="280" y="47" text-anchor="middle">T_AXIS</text>
+  <text class="tm" x="459" y="47" text-anchor="middle">T_SPI</text>
+  <text class="tm" x="624" y="47" text-anchor="middle">T_WAIT_LOAD</text>
+  <text class="tm" x="700" y="47" text-anchor="middle">LD</text>
+  <text class="tm" x="762" y="47" text-anchor="middle">T_TRX_DLY</text>
+  <text class="tm" x="866" y="47" text-anchor="middle">IDLE</text>
+
+  <!-- 1: trig -->
+  <text class="ta" x="148" y="86" text-anchor="end">trig</text>
+  <path class="wva" d="M160,94 H208 V70 H224 V94 H920"/>
+
+  <!-- 2: rx_tx_sel -->
+  <text class="ta" x="148" y="126" text-anchor="end">rx_tx_sel</text>
+  <path class="wva" d="M160,134 H184 V110 H920"/>
+  <text class="tm" x="232" y="122">trig anında örneklenir (örnek: TX = '1')</text>
+
+  <!-- 3: tready -->
+  <text class="tl" x="148" y="166" text-anchor="end">s_axis_tready</text>
+  <path class="wv" d="M160,174 H216 V150 H352 V174 H920"/>
+
+  <!-- 4: tvalid/tdata bus -->
+  <text class="tl" x="148" y="206" text-anchor="end">tvalid·tdata</text>
+  <path class="wv" d="M160,202 H228 M160,202 H228"/>
+  <rect class="busfill" x="236" y="190" width="108" height="24"/>
+  <path class="wv" d="M236,190 H344 M236,214 H344 M228,202 L236,190 M228,202 L236,214 M344,190 L352,202 M344,214 L352,202 M352,202 H920"/>
+  <text class="tm" x="290" y="207" text-anchor="middle">384 kelime</text>
+
+  <!-- 5: spi_cs_n -->
+  <text class="tl" x="148" y="246" text-anchor="end">spi_cs_n[b]</text>
+  <path class="wv" d="M160,230 H364 V254 H382 V230 H388.5 V254 H406.5 V230 H413 V254 H431 V230 H437.5 V254 H455.5 V230 H462 V254 H480 V230 H486.5 V254 H504.5 V230 H511 V254 H529 V230 H535.5 V254 H553.5 V230 H920"/>
+  <text class="tm" x="459" y="272" text-anchor="middle">8 çip × (24b başlık + 32B) = 8 × 280 SCLK</text>
+
+  <!-- 6: load_pending -->
+  <text class="tl" x="148" y="298" text-anchor="end">load_pending</text>
+  <path class="wv" d="M160,306 H566 V282 H682 V306 H920"/>
+
+  <!-- 7: load_trig -->
+  <text class="ta" x="148" y="338" text-anchor="end">load_trig</text>
+  <path class="wva" d="M160,346 H664 V322 H676 V346 H920"/>
+  <text class="tm" x="560" y="338" text-anchor="end">erken gelirse kuyruğa alınır →</text>
+
+  <!-- 8: spi_load -->
+  <text class="ta" x="148" y="378" text-anchor="end">spi_load[6:0]</text>
+  <path class="wva" d="M160,386 H686 V362 H702 V386 H920"/>
+  <text class="tm" x="712" y="370">7 hat eş zamanlı</text>
+
+  <!-- 9: load_done -->
+  <text class="tl" x="148" y="418" text-anchor="end">load_done</text>
+  <path class="wv" d="M160,426 H722 V402 H734 V426 H920"/>
+
+  <!-- 10: trx_out -->
+  <text class="tl" x="148" y="458" text-anchor="end">trx_out[6:0]</text>
+  <path class="wv" d="M160,466 H806 V442 H920"/>
+  <text class="tm" x="814" y="462">RX → TX</text>
+
+  <!-- 11: trx_updated -->
+  <text class="tl" x="148" y="498" text-anchor="end">trx_updated</text>
+  <path class="wv" d="M160,506 H808 V482 H820 V506 H920"/>
+
+  <!-- 12: beam_done -->
+  <text class="tl" x="148" y="538" text-anchor="end">beam_done</text>
+  <path class="wv" d="M160,546 H830 V522 H842 V546 H920"/>
+
+  <!-- axis -->
+  <line class="dim" x1="160" y1="566" x2="920" y2="566"/>
+  <path class="dim" d="M354,560 L358,572 M360,560 L364,572"/>
+  <path class="dim" d="M568,560 L572,572 M574,560 L578,572"/>
+  <path class="dim" d="M684,560 L688,572 M690,560 L694,572"/>
+  <path class="dim" d="M808,560 L812,572 M814,560 L818,572"/>
+  <text class="tm" x="280" y="588" text-anchor="middle">≈ 3.9 µs</text>
+  <text class="tm" x="459" y="588" text-anchor="middle">≈ 90 µs · 7 bus paralel</text>
+  <text class="tm" x="624" y="588" text-anchor="middle">yazılıma bağlı</text>
+  <text class="tm" x="700" y="588" text-anchor="middle">2×10 ns</text>
+  <text class="tm" x="762" y="588" text-anchor="middle">1.0 µs</text>
+  <text class="tm" x="920" y="588" text-anchor="end">ölçeksiz</text>
+</svg>
+<figcaption>Bir beam turunun tamamı (100 MHz clk, 25 MHz SCLK, örnek TX turu). Turuncu
+sinyaller yazılımdan gelir. Eksen ölçeksizdir; segment süreleri altta. <code>load_trig</code>
+SPI yazma sürerken de verilebilir — kuyruğa alınıp yazma bitince uygulanır.</figcaption>
+</figure>
+
+<h3>SPI streaming yazma frame'i</h3>
+<figure>
+<svg viewBox="0 0 940 262" role="img" aria-label="SPI streaming frame zamanlaması: CS, SCLK, MOSI">
+  <!-- CS -->
+  <text class="tl" x="148" y="40" text-anchor="end">spi_cs_n</text>
+  <path class="wv" d="M160,24 H200 V48 H872 V24 H920"/>
+  <!-- tS dim -->
+  <path class="dim" d="M200,62 V70 M232,62 V70 M200,66 H232"/>
+  <text class="tm" x="216" y="82" text-anchor="middle">tS</text>
+  <path class="dim" d="M844,62 V70 M872,62 V70 M844,66 H872"/>
+  <text class="tm" x="858" y="82" text-anchor="middle">tH</text>
+
+  <!-- SCLK -->
+  <text class="tl" x="148" y="116" text-anchor="end">spi_sclk</text>
+  <path class="wv" d="M160,124 H232 V124 H244 V100 H256 V124 H268 V100 H280 V124 H292 V100 H304 V124 H316 V100 H328 V124 H340 V100 H352 V124 H364 V100 H376 V124 H382"/>
+  <path class="dim" d="M386,96 L392,128 M394,96 L400,128"/>
+  <path class="wv" d="M404,124 H412 V100 H424 V124 H436 V100 H448 V124 H460 V100 H472 V124 H484 V100 H496 V124 H502"/>
+  <path class="dim" d="M506,96 L512,128 M514,96 L520,128"/>
+  <path class="wv" d="M524,124 H700 V124 H712 V100 H724 V124 H736 V100 H748 V124 H760 V100 H772 V124 H784 V100 H796 V124 H808 V100 H820 V124 H844 H920"/>
+  <path class="lnd" d="M250,100 V162"/>
+  <text class="tm" x="258" y="158">çip yükselen kenarda örnekler · MOSI düşen kenarda sürülür</text>
+
+  <!-- MOSI bus cells -->
+  <text class="tl" x="148" y="186" text-anchor="end">spi_mosi</text>
+  <g>
+    <rect class="bxi" x="232" y="172" width="24" height="26"/>
+    <rect class="bxi" x="256" y="172" width="24" height="26"/>
+    <rect class="bxi" x="280" y="172" width="24" height="26"/>
+    <rect class="bxi" x="304" y="172" width="24" height="26"/>
+    <rect class="bxi" x="328" y="172" width="24" height="26"/>
+    <rect class="bxi" x="352" y="172" width="24" height="26"/>
+    <rect class="bxi" x="412" y="172" width="24" height="26"/>
+    <rect class="bxi" x="436" y="172" width="24" height="26"/>
+    <rect class="bxa" x="460" y="172" width="24" height="26"/>
+    <rect class="bxa" x="484" y="172" width="24" height="26"/>
+    <rect class="bxa" x="712" y="172" width="24" height="26"/>
+    <rect class="bxa" x="736" y="172" width="24" height="26"/>
+    <rect class="bxa" x="760" y="172" width="24" height="26"/>
+    <rect class="bxa" x="784" y="172" width="24" height="26"/>
+    <rect class="bxa" x="808" y="172" width="24" height="26"/>
+  </g>
+  <text class="tm" x="244" y="190" text-anchor="middle">R/W</text>
+  <text class="tm" x="268" y="190" text-anchor="middle">C3</text>
+  <text class="tm" x="292" y="190" text-anchor="middle">C2</text>
+  <text class="tm" x="316" y="190" text-anchor="middle">C1</text>
+  <text class="tm" x="340" y="190" text-anchor="middle">C0</text>
+  <text class="tm" x="364" y="190" text-anchor="middle">K4</text>
+  <text class="tm" x="392" y="190" text-anchor="middle">…</text>
+  <text class="tm" x="424" y="190" text-anchor="middle">A1</text>
+  <text class="tm" x="448" y="190" text-anchor="middle">A0</text>
+  <text class="tm" x="472" y="190" text-anchor="middle">D7</text>
+  <text class="tm" x="496" y="190" text-anchor="middle">D6</text>
+  <text class="tm" x="512" y="190" text-anchor="middle">…</text>
+  <text class="tm" x="724" y="190" text-anchor="middle">D4</text>
+  <text class="tm" x="748" y="190" text-anchor="middle">D3</text>
+  <text class="tm" x="772" y="190" text-anchor="middle">D2</text>
+  <text class="tm" x="796" y="190" text-anchor="middle">D1</text>
+  <text class="tm" x="820" y="190" text-anchor="middle">D0</text>
+
+  <!-- brackets -->
+  <path class="dim" d="M232,212 V220 H448 V212"/>
+  <text class="tm" x="340" y="236" text-anchor="middle">24 bit başlık (R/W# + çip + kanal + adres)</text>
+  <path class="dim" d="M460,212 V220 H832 V212"/>
+  <text class="tm" x="646" y="236" text-anchor="middle">N × 8 bit veri · adres her byte'ta artar (beam: N = 32)</text>
+  <text class="tm" x="920" y="258" text-anchor="end">CPOL=0 · CPHA=0 · MSB önce</text>
+</svg>
+<figcaption>Streaming yazma: tek CS penceresinde 24 bit başlık + N byte. Beam yazımında
+N=32 → 280 SCLK/çip. Okumada aynı başlık R/W#=1 ile gönderilir; dönen veri ring'in son
+çipinden gelen CLK_OUT/SDO üzerinden örneklenir.</figcaption>
+</figure>
+
+<h3>LOAD → TRX detayı</h3>
+<figure>
+<svg viewBox="0 0 940 250" role="img" aria-label="LOAD darbesi ve TRX geçişinin detaylı zamanlaması">
+  <text class="ta" x="148" y="38" text-anchor="end">load_trig</text>
+  <path class="wva" d="M160,46 H200 V22 H222 V46 H920"/>
+  <text class="tm" x="230" y="38">1 clk yeterli</text>
+
+  <text class="ta" x="148" y="94" text-anchor="end">spi_load[6:0]</text>
+  <path class="wva" d="M160,102 H260 V78 H360 V102 H920"/>
+  <path class="dim" d="M260,116 V124 M360,116 V124 M260,120 H360"/>
+  <text class="tm" x="310" y="138" text-anchor="middle">C_LOAD_HALF = 10 ns @100 MHz</text>
+  <path class="dim" d="M360,116 V124 M460,116 V124 M360,120 H460"/>
+  <text class="tm" x="412" y="138" text-anchor="middle">alçak yarı 10 ns</text>
+  <text class="tm" x="470" y="94">UG-2293 Table 2: toggle periyodu ≥ 7.5 ns → yarım ≥ 3.75 ns</text>
+
+  <text class="tl" x="148" y="166" text-anchor="end">load_done</text>
+  <path class="wv" d="M160,174 H460 V150 H478 V174 H920"/>
+
+  <text class="tl" x="148" y="216" text-anchor="end">trx_out[6:0]</text>
+  <path class="wv" d="M160,224 H780 V200 H920"/>
+  <path class="dim" d="M360,232 V240 M780,232 V240 M360,236 H780"/>
+  <text class="tm" x="570" y="228" text-anchor="middle">G_TRX_DELAY_CYCLES = 100 → 1.0 µs (ölçülen 1.03 µs)</text>
+</svg>
+<figcaption>LOAD darbe genişliği <code>G_CLK_FREQ_HZ</code>'ten türetilir (spec altına
+inen elle ayar elaborasyonda durur). TRX geçişi her zaman LOAD'dan <em>sonra</em> gelir;
+gecikme datasheet'e göre <code>G_TRX_DELAY_CYCLES</code> ile ayarlanır.</figcaption>
+</figure>
+
+<h3>Init sekansı süre dağılımı</h3>
+<figure>
+<svg viewBox="0 0 940 190" role="img" aria-label="Init sekansı Gantt: tablo, faz SRAM, NVM, statik beam">
+  <line class="dim" x1="160" y1="150" x2="920" y2="150"/>
+  <text class="tm" x="160" y="168">0</text>
+  <text class="tm" x="380" y="168" text-anchor="middle">200 µs</text>
+  <text class="tm" x="600" y="168" text-anchor="middle">400 µs</text>
+  <text class="tm" x="820" y="168" text-anchor="middle">600 µs</text>
+  <line class="wvg" x1="380" y1="30" x2="380" y2="150"/>
+  <line class="wvg" x1="600" y1="30" x2="600" y2="150"/>
+  <line class="wvg" x1="820" y1="30" x2="820" y2="150"/>
+
+  <text class="tl" x="148" y="48" text-anchor="end">init tablosu</text>
+  <rect class="bxi" x="160" y="34" width="86" height="20"/>
+  <text class="tm" x="252" y="48">~78 µs · 54 kayıt</text>
+
+  <text class="tl" x="148" y="80" text-anchor="end">faz SRAM</text>
+  <rect class="bxi" x="246" y="66" width="92" height="20"/>
+  <text class="tm" x="344" y="80">~84 µs · 2×128 B</text>
+
+  <text class="tl" x="148" y="112" text-anchor="end">NVM merge</text>
+  <rect class="bxa" x="338" y="98" width="478" height="20"/>
+  <text class="tm" x="577" y="112" text-anchor="middle" style="fill:var(--ink)">~432 µs · 10 500 SCLK burst + çip çip 0x01A poll</text>
+
+  <text class="tl" x="148" y="144" text-anchor="end">statik beam</text>
+  <rect class="bxi" x="816" y="130" width="100" height="20"/>
+  <text class="tm" x="812" y="144" text-anchor="end">yalnız bus 6 · ~90 µs (4 çip × RX+TX)</text>
+</svg>
+<figcaption>Varsayılan generic'lerle (100 MHz clk, 25 MHz SCLK) ölçülen init süresi
+<strong>694 µs</strong>. Baskın kalem 10 500 clock'luk NVM merge burst'üdür; statik beam
+yazımı yalnız bus 6'da koşar ve <code>init_done</code>'ı belirleyen bus odur.</figcaption>
+</figure>
+
+<h3>Ölçülen süreler ve ölçekleme</h3>
+<div class="tblwrap"><table>
+<thead><tr><th>Olay</th><th>Süre</th><th>Not</th></tr></thead>
+<tbody>
+<tr><td>Init (toplam)</td><td class="num">694 µs</td><td>NVM 10 500 SCLK + statik beam dahil, simülasyonda ölçüldü</td></tr>
+<tr><td>AXIS paket transferi</td><td class="num">≈ 3.9 µs</td><td>384 kelime, kelime/clk</td></tr>
+<tr><td>SPI beam yazma</td><td class="num">≈ 90 µs</td><td>bus başına 8 × 280 SCLK; 7 bus paralel</td></tr>
+<tr><td>trig → load_pending</td><td class="num">≈ 94 µs</td><td>AXIS + SPI</td></tr>
+<tr><td>LOAD darbesi</td><td class="num">10 ns</td><td>spec ≥ 3.75 ns, otomatik türetilir</td></tr>
+<tr><td>LOAD → TRX</td><td class="num">1.03 µs</td><td><code>G_TRX_DELAY_CYCLES</code> = 100</td></tr>
+<tr><td>Tam tur (anında load_trig)</td><td class="num">≈ 96 µs</td><td>trig → beam_done</td></tr>
+</tbody></table></div>
+
+<div class="tblwrap"><table>
+<thead><tr><th>SCLK</th><th>Gereken clk</th><th>Beam süresi</th></tr></thead>
+<tbody>
+<tr><td class="num">25 MHz</td><td class="num">100 MHz (div=2)</td><td class="num">≈ 90 µs</td></tr>
+<tr><td class="num">50 MHz</td><td class="num">100 MHz (div=1)</td><td class="num">≈ 45 µs</td></tr>
+<tr><td class="num">100 MHz</td><td class="num">200 MHz (div=1)</td><td class="num">≈ 22 µs</td></tr>
+</tbody></table></div>
+<p class="tm" style="font-size:.84rem">ADMV48281 SCLK üst sınırı 133 MHz. Zincir uzunluğu
+belirleyicidir — 7 bus paralel çalıştığı için toplam çip sayısı süreyi etkilemez.</p>
+</section>
+
+<footer>
+<p><span class="mono">rtl/admv48281_pkg.vhd · spi_master.vhd · spi_slave.vhd ·
+admv_bus_ctrl.vhd · admv48281_top.vhd</span></p>
+<p>Doğrulama: VUnit 17/17 + klasik TB (52 çiplik davranış modeli, mutasyon testli) ·
+Referans: UG-2293 Rev. Sp0 · Ölçümler: NVC simülasyonu, varsayılan generic'ler</p>
+</footer>
+</div>
+</body>
+</html>

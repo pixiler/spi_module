@@ -7,3 +7,10 @@
 xsim.dir/
 *.wdb
 *.pb
+
+# VUnit / NVC simulasyon ciktilari
+vunit_out/
+work/
+*.ghw
+__pycache__/
+.venv/
